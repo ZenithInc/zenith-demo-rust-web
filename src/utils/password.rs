@@ -7,21 +7,22 @@ use argon2::{
     PasswordVerifier,
 };
 
-fn hash_password(password: &str) -> Result<String, argon2::password_hash::Error> {
+pub fn hash_password(password: &str) -> Result<String, argon2::password_hash::Error> {
     let salt = SaltString::generate(&mut OsRng);
     let config = Argon2::default();
     let hash = config.hash_password(password.as_bytes(), &salt)?.to_string();
     Ok(hash)
 }
 
-fn verify_password(password: &str, password_hash: &str) -> Result<bool, argon2::password_hash::Error> {
+pub fn verify_password(password: &str, password_hash: &str) -> Result<bool, anyhow::Error> {
     let config = Argon2::default();
-    let password_hash = PasswordHash::new(&password_hash)?;
+    let password_hash = PasswordHash::new(&password_hash).map_err(|e| anyhow::anyhow!(e))?;
     let pass = config.verify_password(password.as_bytes(), &password_hash).is_ok();
     Ok(pass)
 }
 
 mod test {
+    #[warn(unused_imports)]
     use super::{hash_password, verify_password};
 
     #[test]
