@@ -21,8 +21,8 @@ pub fn verify_password(password: &str, password_hash: &str) -> Result<bool, anyh
     Ok(pass)
 }
 
+#[cfg(test)]
 mod test {
-    #[warn(unused_imports)]
     use super::{hash_password, verify_password};
 
     #[test]
