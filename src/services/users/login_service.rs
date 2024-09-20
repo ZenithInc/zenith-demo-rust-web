@@ -1,7 +1,6 @@
 use crate::params::requests::user::LoginParams;
 use crate::utils::password::verify_password;
 use crate::repositories::user::UserRepository;
-use sqlx::Row;
 use crate::utils::jwt::create_token;
 
 pub struct LoginService;
@@ -12,13 +11,12 @@ impl LoginService {
         dotenv::dotenv().ok();
 
         let user = UserRepository::get_user_by_username(&params.username).await?;
-        if !verify_password(&params.password, &user.try_get::<String, &str>("password")?)? {
+        if !verify_password(&params.password, &user.password)? {
             return Err(anyhow::anyhow!("Invalid password"));
         }
 
         let sercet_key = std::env::var("SECRET_KEY").unwrap();
-        let user_id = user.try_get::<u64, &str>("id")?;
-        let token = create_token(&user_id.to_string(), &sercet_key)?;
+        let token = create_token(&user.id.to_string(), &sercet_key)?;
 
         Ok(token)
     }

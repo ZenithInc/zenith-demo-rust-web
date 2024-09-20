@@ -4,6 +4,7 @@ mod routes;
 mod params;
 mod services;
 mod utils;
+mod models;
 
 use axum::{
     Router,
