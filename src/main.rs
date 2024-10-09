@@ -1,11 +1,3 @@
-mod handles;
-mod repositories;
-mod routes;
-mod params;
-mod services;
-mod utils;
-mod models;
-
 use axum::{
     Router,
     Json as AxumJson,
@@ -17,15 +9,19 @@ use axum::{
 use axum::response::IntoResponse;
 use serde_json::json;
 
-use routes::users::register_user_routes;
+use rust_demo::routes::users::register_user_routes;
+use rust_demo::utils::config;
 
 #[tokio::main]
 async fn main() {
+    config::init();
     let app = Router::new()
         .merge(register_user_routes())
         .layer(middleware::from_fn(error_handler));
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let bind = std::env::var("BIND")
+        .unwrap_or_else(|_| "0.0.0.0:3000".to_string());
+    let listener = tokio::net::TcpListener::bind(bind).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
 
