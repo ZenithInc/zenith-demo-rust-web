@@ -10,7 +10,8 @@ use axum::response::IntoResponse;
 use serde_json::json;
 use tracing::{event, Level};
 use tracing_subscriber::fmt::SubscriberBuilder;
-use rust_demo::routes::users::register_user_routes;
+use rust_demo::routes::uv_lamp::register_uv_lamp_routes;
+use rust_demo::utils;
 use rust_demo::utils::config;
 
 #[tokio::main]
@@ -32,8 +33,11 @@ async fn main() {
 
     event!(Level::INFO, "config initialized");
 
+    utils::mqtt::init_mqtt_handler().await.unwrap();
+    event!(Level::INFO, "mqtt handler initialized");
+
     let app = Router::new()
-        .merge(register_user_routes())
+        .merge(register_uv_lamp_routes())
         .layer(middleware::from_fn(error_handler));
 
     let bind = std::env::var("BIND")
