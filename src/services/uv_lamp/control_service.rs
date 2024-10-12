@@ -1,6 +1,5 @@
 use serde_json::json;
 use tracing::{error, info};
-use uuid::Uuid;
 use crate::params::requests::uv_lamp::TurnParams;
 use crate::repositories::uv_lamp_mqtt_message::UVLampMqttMessage;
 use crate::utils;
@@ -16,13 +15,12 @@ impl ControlService {
         let message = json!({
             "id": params.message_id,
             "s": if params.status { 1 } else { 0 },
-            // 我也不知道 d 什么意思，有什么作用，如果开灯没有这个参数，数据包解析错误
-            "d": "",
+            "d": 1,
         }).to_string();
 
         if let Some(mqtt_handler) = utils::mqtt::instance() {
             mqtt_handler.send(topic.as_str(), message.clone()).await?;
-            UVLampMqttMessage::create(params.message_id.to_string(), Uuid::new_v4().to_string(), message).await?;
+            UVLampMqttMessage::create(params.message_id.to_string(), params.device_number, message).await?;
         } else {
             error!("MQTT Handler not initialized!")
         }

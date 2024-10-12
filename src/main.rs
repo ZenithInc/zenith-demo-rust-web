@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use axum::{
     Router,
     Json as AxumJson,
@@ -8,6 +9,8 @@ use axum::{
 };
 use axum::response::IntoResponse;
 use serde_json::json;
+use tokio::signal;
+use tokio::sync::Notify;
 use tracing::{event, Level};
 use tracing_subscriber::fmt::SubscriberBuilder;
 use rust_demo::routes::uv_lamp::register_uv_lamp_routes;
@@ -36,6 +39,9 @@ async fn main() {
     utils::mqtt::init_mqtt_handler().await.unwrap();
     event!(Level::INFO, "mqtt handler initialized");
 
+    let notify = Arc::new(Notify::new());
+    let _notify_clone = notify.clone();
+
     let app = Router::new()
         .merge(register_uv_lamp_routes())
         .layer(middleware::from_fn(error_handler));
@@ -46,7 +52,19 @@ async fn main() {
     event!(Level::INFO, "server started at {}", bind);
 
     let listener = tokio::net::TcpListener::bind(bind).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal(notify))
+        .await.unwrap();
+}
+
+async fn shutdown_signal(notify: Arc<Notify>) {
+   signal::ctrl_c()
+       .await
+       .expect("Failed to install CTRL+C signal handler");
+    println!("Shutdown signal received");
+
+    // Notify task to stop
+    notify.notify_one();
 }
 
 async fn error_handler(req: ExtractRequest, next: middleware::Next) -> Response {
