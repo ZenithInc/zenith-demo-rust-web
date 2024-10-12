@@ -13,6 +13,9 @@ pub struct ApiResponse<T> {
     data: Option<T>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct Empty {}
+
 impl<T> ApiResponse<T> {
     pub fn new(data: T) -> Self {
         ApiResponse {
