@@ -16,6 +16,8 @@ use tracing_subscriber::fmt::SubscriberBuilder;
 use rust_demo::routes::uv_lamp::register_uv_lamp_routes;
 use rust_demo::utils;
 use rust_demo::utils::config;
+use rust_demo::tasks::task_manager::TaskManager;
+use rust_demo::tasks::mqtt_tasks;
 
 #[tokio::main]
 async fn main() {
@@ -41,6 +43,12 @@ async fn main() {
 
     let notify = Arc::new(Notify::new());
     let _notify_clone = notify.clone();
+
+    let task_manager = TaskManager::new();
+
+    task_manager.register_task(mqtt_tasks::notify).await;
+
+    task_manager.start_tasks().await;
 
     let app = Router::new()
         .merge(register_uv_lamp_routes())
