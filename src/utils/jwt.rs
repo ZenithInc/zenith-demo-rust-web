@@ -1,6 +1,6 @@
+use jsonwebtoken::{encode, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
-use jsonwebtoken::{Header, encode, EncodingKey};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
@@ -12,14 +12,19 @@ pub fn create_token(sub: &String, secret: &str) -> Result<String, anyhow::Error>
     let expiration = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("valid timestamp")
-        .as_secs() + 7 * 24 * 60 * 60;
+        .as_secs()
+        + 7 * 24 * 60 * 60;
 
     let claims = Claims {
         sub: sub.clone(),
         exp: expiration as usize,
     };
 
-    let result = encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_ref()));
+    let result = encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(secret.as_ref()),
+    );
 
     match result {
         Ok(token) => Ok(token),

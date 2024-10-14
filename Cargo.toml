@@ -11,7 +11,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 validator = { version = "0.18.1", features = ["derive"] }
 argon2 = "0.5.3"
-sqlx = { version = "0.8.2", features = ["mysql", "runtime-tokio"] }
+sqlx = { version = "0.8.2", features = ["mysql", "runtime-tokio", "chrono", "macros"] }
 dotenv = "0.15.0"
 anyhow = "1.0.89"
 jsonwebtoken = "9.3.0"
@@ -20,3 +20,7 @@ tracing-subscriber = "0.3.18"
 tracing-appender = "0.2.3"
 rumqttc = "0.24.0"
 once_cell = "1.20.2"
+futures = "0.3.31"
+chrono = "0.4.38"
+chrono-tz = "0.10.0"
+reqwest = { version = "0.12.8", features = ["json"] }

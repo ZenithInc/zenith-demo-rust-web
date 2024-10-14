@@ -1,6 +1,6 @@
-pub mod password;
-pub mod mysql;
+pub mod config;
 pub mod error;
 pub mod jwt;
-pub mod config;
 pub mod mqtt;
+pub mod mysql;
+pub mod password;

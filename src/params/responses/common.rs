@@ -1,10 +1,10 @@
-use serde::Serialize;
-use serde_json::json;
 use axum::{
+    http::StatusCode,
     response::{IntoResponse, Response},
     Json,
-    http::StatusCode,
 };
+use serde::Serialize;
+use serde_json::json;
 
 #[derive(Serialize)]
 pub struct ApiResponse<T> {
@@ -26,7 +26,10 @@ impl<T> ApiResponse<T> {
     }
 }
 
-impl<T> IntoResponse for ApiResponse<T> where T: Serialize,{
+impl<T> IntoResponse for ApiResponse<T>
+where
+    T: Serialize,
+{
     fn into_response(self) -> Response {
         let body = Json(json!({
             "code": self.code,

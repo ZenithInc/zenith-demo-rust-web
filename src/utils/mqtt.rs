@@ -1,21 +1,23 @@
-use std::sync::Arc;
-use std::time::Duration;
+use crate::repositories::uv_lamp_mqtt_notify_job::UVLampMqttNotifyJob;
+use crate::repositories::uv_lamp_mqtt_received_messages::UVLampMqttReceivedMessages;
 use anyhow::anyhow;
 use once_cell::sync::OnceCell;
 use rumqttc::{AsyncClient, Event, Incoming, MqttOptions, Publish, QoS};
-use tokio::sync::{mpsc};
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::sync::mpsc;
 use tracing::{debug, error, info};
-use crate::repositories::uv_lamp_mqtt_notify_job::UVLampMqttNotifyJob;
-use crate::repositories::uv_lamp_mqtt_received_messages::UVLampMqttReceivedMessages;
 
 pub struct MqttHandler {
     sender: mpsc::Sender<(String, String)>,
 }
 
 impl MqttHandler {
-
     pub async fn send(&self, topic: &str, message: String) -> Result<(), anyhow::Error> {
-        self.sender.send((topic.to_string(), message)).await.map_err(|e| anyhow!(e))
+        self.sender
+            .send((topic.to_string(), message))
+            .await
+            .map_err(|e| anyhow!(e))
     }
 
     async fn new() -> Result<Self, anyhow::Error> {
@@ -40,8 +42,12 @@ impl MqttHandler {
 
         // fixme: 只有在发送的消息的时候才会去订阅
         // Subscribe topic
-        client.subscribe("87855294541367dab3e244c2441c5f22/+/oc/c", QoS::AtLeastOnce).await?;
-        client.subscribe("87855294541367dab3e244c2441c5f22/+/up/c", QoS::AtLeastOnce).await?;
+        client
+            .subscribe("87855294541367dab3e244c2441c5f22/+/oc/c", QoS::AtLeastOnce)
+            .await?;
+        client
+            .subscribe("87855294541367dab3e244c2441c5f22/+/up/c", QoS::AtLeastOnce)
+            .await?;
 
         tokio::spawn(async move {
             loop {
@@ -86,10 +92,15 @@ impl MqttHandler {
     }
 
     async fn save_received_message(topic: &String, device_number: &String, payload: &String) {
-        let result = UVLampMqttReceivedMessages::create(topic.clone(), device_number.to_string(), payload.clone()).await;
+        let result = UVLampMqttReceivedMessages::create(
+            topic.clone(),
+            device_number.to_string(),
+            payload.clone(),
+        )
+        .await;
         match result {
             Ok(id) => info!("Saved message, id {}", id),
-            Err(e) => error!("An error occurred: {}", e)
+            Err(e) => error!("An error occurred: {}", e),
         }
     }
 
@@ -97,14 +108,12 @@ impl MqttHandler {
         let result = UVLampMqttNotifyJob::create(device_number, payload).await;
         match result {
             Ok(id) => info!("Created notification job, id {}", id),
-            Err(e) => error!("An error occurred: {}", e)
+            Err(e) => error!("An error occurred: {}", e),
         }
     }
 
     fn get_device_number_from_topic(topic: &str) -> Option<String> {
-        let parts: Vec<String> = topic.split("/")
-            .map(|s| s.to_string())
-            .collect();
+        let parts: Vec<String> = topic.split("/").map(|s| s.to_string()).collect();
         if let Some(device_number) = parts.get(1) {
             Some(device_number.clone())
         } else {
@@ -118,7 +127,9 @@ static MQTT_HANDLER: OnceCell<Arc<MqttHandler>> = OnceCell::new();
 
 pub async fn init_mqtt_handler() -> Result<(), anyhow::Error> {
     let handler = MqttHandler::new().await?;
-    MQTT_HANDLER.set(Arc::new(handler)).map_err(|_| anyhow!("Failed to set mqtt handler"))?;
+    MQTT_HANDLER
+        .set(Arc::new(handler))
+        .map_err(|_| anyhow!("Failed to set mqtt handler"))?;
     Ok(())
 }
 

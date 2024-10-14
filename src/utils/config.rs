@@ -1,5 +1,5 @@
-use std::sync::Once;
 use dotenv::dotenv;
+use std::sync::Once;
 
 static INIT: Once = Once::new();
 

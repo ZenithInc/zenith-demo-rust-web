@@ -25,6 +25,8 @@ create table if not exists `uv_lamp_mqtt_notify_jobs`(
     `device_number` varchar(128) not null comment '设备编号',
     `notify_contents` varchar(1024) not null comment '通知内容',
     `is_completed` tinyint unsigned not null default 0 comment '是否完成:0-否;1-是',
+    `retry_count` tinyint unsigned not null default 0 comment '重试次数',
+    `next_retry_time` int unsigned not null default 0 comment '下次重试时间:时间戳(秒)',
     `deleted_at` timestamp null comment '删除时间',
     `created_at` timestamp not null default current_timestamp comment '创建时间',
     `updated_at` timestamp not null default current_timestamp on update current_timestamp comment '更新时间'

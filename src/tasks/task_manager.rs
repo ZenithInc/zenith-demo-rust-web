@@ -1,9 +1,9 @@
+use futures::future::BoxFuture;
 use std::future::Future;
-use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
 
-type TaskLogic = Arc<dyn Fn(Arc<Notify>) -> Pin<Box<dyn Future<Output = ()> + Send + Sync>> + Send + Sync>;
+type TaskLogic = Arc<dyn Fn(Arc<Notify>) -> BoxFuture<'static, ()> + Send + Sync>;
 
 pub struct TaskManager {
     notify: Arc<Notify>,
@@ -21,12 +21,10 @@ impl TaskManager {
     pub async fn register_task<F, Fut>(&self, task_logic: F)
     where
         F: Fn(Arc<Notify>) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = ()> + Send + Sync + 'static,
+        Fut: Future<Output = ()> + Send + 'static,
     {
-        let boxed_task: TaskLogic = Arc::new(move |notify| {
-            let fut = task_logic(notify);
-            Box::pin(fut) as Pin<Box<dyn Future<Output = ()> + Send + Sync>>
-        });
+        let boxed_task: TaskLogic =
+            Arc::new(move |notify| Box::pin(task_logic(notify)) as BoxFuture<'static, ()>);
         let mut tasks = self.tasks.lock().await;
         tasks.push(boxed_task);
     }
@@ -41,5 +39,4 @@ impl TaskManager {
             });
         }
     }
-
 }
