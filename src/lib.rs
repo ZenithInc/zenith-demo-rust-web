@@ -5,3 +5,4 @@ pub mod routes;
 pub mod services;
 pub mod tasks;
 pub mod utils;
+pub mod init;

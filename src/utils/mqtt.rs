@@ -40,7 +40,6 @@ impl MqttHandler {
 
         let (sender, mut receiver) = mpsc::channel(100);
 
-        // fixme: 只有在发送的消息的时候才会去订阅
         // Subscribe topic
         client
             .subscribe("87855294541367dab3e244c2441c5f22/+/oc/c", QoS::AtLeastOnce)

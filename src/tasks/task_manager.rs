@@ -11,9 +11,9 @@ pub struct TaskManager {
 }
 
 impl TaskManager {
-    pub fn new() -> Self {
+    pub fn new(notify: Arc<Notify>) -> Self {
         TaskManager {
-            notify: Arc::new(Notify::new()),
+            notify: notify.clone(),
             tasks: Arc::new(Mutex::new(Vec::new())),
         }
     }
