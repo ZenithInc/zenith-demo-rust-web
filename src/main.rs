@@ -35,7 +35,7 @@ async fn main() {
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
 
     SubscriberBuilder::default()
-        .with_max_level(Level::INFO)
+        .with_max_level(Level::DEBUG)
         .with_writer(non_blocking)
         .init();
 

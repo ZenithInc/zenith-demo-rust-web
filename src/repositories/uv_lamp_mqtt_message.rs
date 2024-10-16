@@ -8,7 +8,7 @@ impl UVLampMqttMessage {
         device_number: String,
         payload: String,
     ) -> Result<(), anyhow::Error> {
-        let db = MySql::new().await?;
+        let db = MySql::get_instance().await?;
         let sql = "INSERT INTO `uv_lamp_mqtt_messages` (`message_id`, `device_number`, `payload`) value (?, ?, ?);" ;
         sqlx::query(sql)
             .bind(message_id)

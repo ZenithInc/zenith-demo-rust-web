@@ -81,6 +81,9 @@ impl MqttHandler {
         let payload = publish.payload.to_vec();
         match String::from_utf8(payload) {
             Ok(payload) => {
+                if payload.contains("id") {
+                    return;
+                }
                 info!("Received message: topic [{}], payload: {}", topic, payload);
                 if let Some(device_number) = Self::get_device_number_from_topic(topic.as_str()) {
                     Self::save_received_message(&topic, &device_number, &payload).await;

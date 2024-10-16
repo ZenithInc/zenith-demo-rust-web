@@ -38,7 +38,7 @@ impl UVLampMqttNotifyJob {
         device_number: String,
         notify_contents: String,
     ) -> Result<u64, anyhow::Error> {
-        let db = MySql::new().await?;
+        let db = MySql::get_instance().await?;
         let sql = "INSERT INTO `uv_lamp_mqtt_notify_jobs` (`device_number`, `notify_contents`) value (?, ?)";
         let result = sqlx::query(sql)
             .bind(device_number)
@@ -49,7 +49,7 @@ impl UVLampMqttNotifyJob {
     }
 
     pub async fn get_incomplete_jobs(max_retry_count: u8) -> Result<Vec<Job>, anyhow::Error> {
-        let db = MySql::new().await?;
+        let db = MySql::get_instance().await?;
         let current_time = Utc::now().timestamp() as u64;
 
         let sql = "SELECT * from `uv_lamp_mqtt_notify_jobs` where `retry_count` <= ? and `is_completed` = ? and `next_retry_time` <= ? limit 10;";
@@ -69,7 +69,7 @@ impl UVLampMqttNotifyJob {
         before_value: u8,
         next_try_time: u64,
     ) -> Result<(), anyhow::Error> {
-        let db = MySql::new().await?;
+        let db = MySql::get_instance().await?;
 
         let sql = "UPDATE `uv_lamp_mqtt_notify_jobs` SET `retry_count` = ?, `next_retry_time` = ? where `id` = ? and `retry_count` = ?;";
         debug!(
@@ -87,6 +87,23 @@ impl UVLampMqttNotifyJob {
         if result.rows_affected() == 0 {
             return Err(anyhow::anyhow!(
                 "Update failed: retry_count does not match the expected value."
+            ));
+        }
+        Ok(())
+    }
+
+    pub async fn update_success(id: u64) -> Result<(), anyhow::Error> {
+        let db = MySql::get_instance().await?;
+        let sql = "UPDATE `uv_lamp_mqtt_notify_jobs` SET is_completed = ? WHERE id = ?;";
+
+        let result = sqlx::query(sql)
+            .bind(IsCompleted::Complete.as_i32())
+            .bind(id)
+            .execute(&db.pool)
+            .await?;
+        if result.rows_affected() == 0 {
+            return Err(anyhow::anyhow!(
+                "Update job `is_completed` to successful failed"
             ));
         }
         Ok(())
