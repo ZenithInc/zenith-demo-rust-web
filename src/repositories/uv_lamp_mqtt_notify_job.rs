@@ -22,6 +22,7 @@ pub struct Job {
 pub enum IsCompleted {
     Incomplete = 0,
     Complete = 1,
+    Failed = 2,
 }
 
 impl IsCompleted {
@@ -29,6 +30,7 @@ impl IsCompleted {
         match self {
             IsCompleted::Incomplete => 0,
             IsCompleted::Complete => 1,
+            IsCompleted::Failed => 2,
         }
     }
 }
@@ -104,6 +106,23 @@ impl UVLampMqttNotifyJob {
         if result.rows_affected() == 0 {
             return Err(anyhow::anyhow!(
                 "Update job `is_completed` to successful failed"
+            ));
+        }
+        Ok(())
+    }
+
+    pub async fn update_failed(id: u64) -> Result<(), anyhow::Error> {
+        let db = MySql::get_instance().await?;
+        let sql = "UPDATE `uv_lamp_mqtt_notify_jobs` SET is_completed = ? WHERE id = ?;";
+
+        let result = sqlx::query(sql)
+            .bind(IsCompleted::Failed.as_i32())
+            .bind(id)
+            .execute(&db.pool)
+            .await?;
+        if result.rows_affected() == 0 {
+            return Err(anyhow::anyhow!(
+                "Update job `is_completed` to failed"
             ));
         }
         Ok(())

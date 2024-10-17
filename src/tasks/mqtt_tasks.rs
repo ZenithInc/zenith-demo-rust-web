@@ -347,10 +347,16 @@ async fn handle_error(job: &Job) {
             )
                 .await;
             match result {
-                Ok(_) => {}
+                Ok(_) => {},
                 Err(err) => error!("Update retry count failed: {}", err),
             }
         }
-        None => error!("Failed to send request to next retry interval"),
+        None => {
+            let result = UVLampMqttNotifyJob::update_failed(job.id).await;
+            match result {
+                Ok(_) => {},
+                Err(err)  => error!("Update failed failed: {}", err),
+            }
+        },
     }
 }

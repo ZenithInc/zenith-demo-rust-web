@@ -1,3 +1,6 @@
 /target
 .env
+.env.local
+.env.prod
+.docker-compose.env
 /logs
