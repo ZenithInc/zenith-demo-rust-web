@@ -5,6 +5,7 @@ use tokio::signal;
 use tokio::sync::Notify;
 use tracing::{event, Level};
 use connect_x::init::{init_config, init_logging, init_routes, init_tasks};
+use connect_x::init::tasks::init_cron_tasks;
 
 #[tokio::main]
 async fn main() {
@@ -29,6 +30,7 @@ async fn main() {
 
     let notify = Arc::new(Notify::new());
     init_tasks(notify.clone()).await;
+    init_cron_tasks().await;
 
     let app = init_routes(shared_timezone);
 
