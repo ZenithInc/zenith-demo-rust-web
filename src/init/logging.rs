@@ -1,10 +1,10 @@
-use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
+use std::sync::Arc;
 use tracing::{event, Level};
 use tracing_appender::non_blocking::WorkerGuard;
-use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt::format::Writer;
+use tracing_subscriber::EnvFilter;
 
 struct LocalTimeFormatter {
     timezone: Arc<Tz>,
@@ -31,9 +31,9 @@ pub fn init_logging(timezone: Arc<Tz>) -> WorkerGuard {
     println!("Current log level: {}", log_level);
 
     tracing_subscriber::fmt()
-         .with_timer(LocalTimeFormatter { timezone })
-         .with_env_filter(EnvFilter::new(log_level))
-         .with_writer(non_blocking)
+        .with_timer(LocalTimeFormatter { timezone })
+        .with_env_filter(EnvFilter::new(log_level))
+        .with_writer(non_blocking)
         .init();
 
     event!(Level::INFO, "Logging initialized!");

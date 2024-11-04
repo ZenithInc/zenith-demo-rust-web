@@ -4,9 +4,9 @@ pub struct UVLampMqttReceivedMessages;
 
 impl UVLampMqttReceivedMessages {
     pub async fn create(
-        topic: String,
+        topic: &String,
         device_number: String,
-        payload: String,
+        payload: &String,
     ) -> Result<u64, anyhow::Error> {
         let db = MySql::get_instance().await?;
         let sql = "INSERT INTO `uv_lamp_mqtt_received_messages` (`topic`, `device_number`, `payload`) VALUES (?, ?, ?);";

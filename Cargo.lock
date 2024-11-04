@@ -316,6 +316,7 @@ dependencies = [
  "jsonwebtoken",
  "md5",
  "once_cell",
+ "rand",
  "rand_core",
  "reqwest",
  "rumqttc",

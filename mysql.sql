@@ -31,3 +31,5 @@ create table if not exists `uv_lamp_mqtt_notify_jobs`(
     `created_at` timestamp not null default current_timestamp comment '创建时间',
     `updated_at` timestamp not null default current_timestamp on update current_timestamp comment '更新时间'
 ) comment '紫外线等 MQTT 通知任务表';
+
+alter table `uv_lamp_mqtt_notify_jobs` add column `type` varchar(64) not null default 'LIGHT_SWITCH_TASK' comment '任务' after `next_retry_time`;

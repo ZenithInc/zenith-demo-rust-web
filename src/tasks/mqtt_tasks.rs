@@ -1,23 +1,14 @@
 use crate::repositories::uv_lamp_mqtt_notify_job::{Job, UVLampMqttNotifyJob};
-use chrono::Utc;
 use futures::future::BoxFuture;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
-use reqwest::{Client, Response};
+use reqwest::{Client};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::sync::Arc;
 use std::time::Duration;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use tokio::sync::{Notify, Semaphore};
 use tracing::{debug, error, info};
-
-enum NextRetryDuration {
-    OneMinute,
-    ThreeMinutes,
-    FifteenMinutes,
-    OneHour,
-    SixHours,
-    TwelveHours,
-}
+use crate::tasks::{handle_error, handle_received_response, TaskType};
 
 #[derive(Debug)]
 enum LampStatus {
@@ -177,38 +168,12 @@ impl NotifyBody {
     }
 }
 
-
-impl NextRetryDuration {
-    fn as_seconds(&self) -> u64 {
-        match self {
-            NextRetryDuration::OneMinute => 60,
-            NextRetryDuration::ThreeMinutes => 3 * 60,
-            NextRetryDuration::FifteenMinutes => 15 * 60,
-            NextRetryDuration::OneHour => 60 * 60,
-            NextRetryDuration::SixHours => 6 * 60 * 60,
-            NextRetryDuration::TwelveHours => 12 * 60 * 60,
-        }
-    }
-
-    fn from_retry_count(count: u8) -> Option<NextRetryDuration> {
-        match count {
-            1 => Some(NextRetryDuration::OneMinute),
-            2 => Some(NextRetryDuration::ThreeMinutes),
-            3 => Some(NextRetryDuration::FifteenMinutes),
-            4 => Some(NextRetryDuration::OneHour),
-            5 => Some(NextRetryDuration::SixHours),
-            6 => Some(NextRetryDuration::TwelveHours),
-            _ => None,
-        }
-    }
-}
-
 pub fn notify(notify: Arc<Notify>) -> BoxFuture<'static, ()> {
     Box::pin(async move {
         loop {
             info!("MQTT notify task start running...");
             tokio::select! {
-                _ = tokio::time::sleep(tokio::time::Duration::from_secs(15)) => {
+                _ = tokio::time::sleep(Duration::from_secs(15)) => {
                      handle_notify().await;
                 },
                 _ = notify.notified() => {
@@ -228,7 +193,8 @@ fn handle_notify() -> BoxFuture<'static, ()> {
             .parse::<u8>()
             .unwrap_or(6);
 
-        match UVLampMqttNotifyJob::get_incomplete_jobs(max_retry_count).await {
+        let job_type = TaskType::LightSwitchTask.to_string();
+        match UVLampMqttNotifyJob::get_incomplete_jobs(max_retry_count, job_type).await {
             Ok(jobs) => {
                 info!("Find jobs: {}", jobs.len());
                 send_requests(jobs).await;
@@ -263,7 +229,7 @@ async fn send_requests(jobs: Vec<Job>) {
             }
 
             while let Some(_) = futures.next().await {}
-        },
+        }
         Err(_) => error!("Failed to create client"),
     }
 }
@@ -273,40 +239,25 @@ async fn send_request(job: &Job, semaphore: &Arc<Semaphore>, client: &Client) {
     let result = std::env::var("UV_LAMP_MQTT_TASK_NOTIFY_URL");
     match result {
         Ok(url) => {
-            if let Some(body) = notify_contents_2_payload(&job.notify_contents, &job.device_number) {
-                let request_result = client
-                    .post(url)
-                    .json(&body)
-                    .send()
-                    .await;
+            if let Some(body) = notify_contents_2_payload(&job.notify_contents, &job.device_number)
+            {
+                let request_result = client.post(url).json(&body).send().await;
                 match request_result {
                     Ok(response) => handle_received_response(&job, response).await,
                     Err(err) => {
                         error!("Request endpoint failed: {}", err);
                         handle_error(&job).await
-                    },
+                    }
                 }
             } else {
                 error!("Failed to notify contents");
             }
         }
-        Err(_) => error!("Get notify url of task failed!")
+        Err(_) => error!("Get notify url of task failed!"),
     }
 }
 
-async fn handle_received_response(job: &&Job, response: Response) {
-    if response.status().is_success() {
-        let result = UVLampMqttNotifyJob::update_success(job.id).await;
-        match result {
-            Ok(_) => info!("Job notify task has completed successfully!"),
-            Err(err) => error!("Failed update to notify job: {}", err),
-        }
-    } else {
-        error!("Request endpoint failed, status is {}", response.status().as_str());
-        handle_error(&job).await;
-    }
-}
-
+// xxx: 这面这个方法写得啰嗦，可以优化，参考： mqtt_status_tasks::notify_contents_2_payload()
 fn notify_contents_2_payload(notify_contents: &String, device_number: &String) -> Option<String> {
     let payload: Option<Payload> = match serde_json::from_str(&notify_contents) {
         Ok(body) => Some(body),
@@ -321,42 +272,12 @@ fn notify_contents_2_payload(notify_contents: &String, device_number: &String) -
             Ok(body) => {
                 debug!("Sending notification body: {}", body);
                 Some(body)
-            },
+            }
             Err(_) => {
                 error!("Failed to serialize notify contents!");
                 None
-            },
+            }
         };
     }
     None
-}
-
-async fn handle_error(job: &Job) {
-    let retry_count = job.retry_count + 1;
-    let option_seconds = NextRetryDuration::from_retry_count(retry_count);
-    match option_seconds {
-        Some(seconds) => {
-            let current_timestamp = Utc::now().timestamp() as u64;
-            let next_timestamp = current_timestamp + seconds.as_seconds();
-
-            let result = UVLampMqttNotifyJob::update_retry_count(
-                job.id,
-                retry_count,
-                job.retry_count,
-                next_timestamp,
-            )
-                .await;
-            match result {
-                Ok(_) => {},
-                Err(err) => error!("Update retry count failed: {}", err),
-            }
-        }
-        None => {
-            let result = UVLampMqttNotifyJob::update_failed(job.id).await;
-            match result {
-                Ok(_) => {},
-                Err(err)  => error!("Update failed failed: {}", err),
-            }
-        },
-    }
 }

@@ -1,12 +1,11 @@
-use std::sync::Arc;
-use axum::{middleware, Extension, Router};
+use crate::routes::uv_lamp::register_uv_lamp_routes;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use axum::{extract::Request as ExtractRequest, Json as AxumJson};
+use axum::{middleware, Extension, Router};
 use chrono_tz::Tz;
 use serde_json::json;
-use crate::routes::uv_lamp::register_uv_lamp_routes;
-use axum::{extract::Request as ExtractRequest, Json as AxumJson};
-
+use std::sync::Arc;
 
 pub fn init_routes(shared_timezone: Arc<Tz>) -> Router {
     Router::new()

@@ -1,11 +1,11 @@
 use chrono_tz::Tz;
+use connect_x::init::tasks::init_cron_tasks;
+use connect_x::init::{init_config, init_logging, init_routes, init_tasks};
 use connect_x::utils;
 use std::sync::Arc;
 use tokio::signal;
 use tokio::sync::Notify;
 use tracing::{event, Level};
-use connect_x::init::{init_config, init_logging, init_routes, init_tasks};
-use connect_x::init::tasks::init_cron_tasks;
 
 #[tokio::main]
 async fn main() {

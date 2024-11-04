@@ -39,27 +39,30 @@ impl UVLampMqttNotifyJob {
     pub async fn create(
         device_number: String,
         notify_contents: String,
+        job_type: String,
     ) -> Result<u64, anyhow::Error> {
         let db = MySql::get_instance().await?;
-        let sql = "INSERT INTO `uv_lamp_mqtt_notify_jobs` (`device_number`, `notify_contents`) value (?, ?)";
+        let sql = "INSERT INTO `uv_lamp_mqtt_notify_jobs` (`device_number`, `notify_contents`, `type`) value (?, ?, ?)";
         let result = sqlx::query(sql)
             .bind(device_number)
             .bind(notify_contents)
+            .bind(job_type)
             .execute(&db.pool)
             .await?;
         Ok(result.last_insert_id())
     }
 
-    pub async fn get_incomplete_jobs(max_retry_count: u8) -> Result<Vec<Job>, anyhow::Error> {
+    pub async fn get_incomplete_jobs(max_retry_count: u8, job_type: String) -> Result<Vec<Job>, anyhow::Error> {
         let db = MySql::get_instance().await?;
         let current_time = Utc::now().timestamp() as u64;
 
-        let sql = "SELECT * from `uv_lamp_mqtt_notify_jobs` where `retry_count` <= ? and `is_completed` = ? and `next_retry_time` <= ? limit 10;";
+        let sql = "SELECT * from `uv_lamp_mqtt_notify_jobs` where `retry_count` <= ? and `is_completed` = ? and `next_retry_time` <= ? and `type` = ? limit 10;";
 
         let jobs = sqlx::query_as::<_, Job>(sql)
             .bind(max_retry_count)
             .bind(IsCompleted::Incomplete.as_i32())
             .bind(current_time)
+            .bind(job_type)
             .fetch_all(&db.pool)
             .await?;
         Ok(jobs)
@@ -121,9 +124,7 @@ impl UVLampMqttNotifyJob {
             .execute(&db.pool)
             .await?;
         if result.rows_affected() == 0 {
-            return Err(anyhow::anyhow!(
-                "Update job `is_completed` to failed"
-            ));
+            return Err(anyhow::anyhow!("Update job `is_completed` to failed"));
         }
         Ok(())
     }
