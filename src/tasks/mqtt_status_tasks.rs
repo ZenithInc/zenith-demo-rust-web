@@ -163,51 +163,38 @@ async fn send_requests(jobs: Vec<Job>, config: &Config) {
 
 async fn send_request(job: &Job, semaphore: &Semaphore, client: &Client, config: Config) {
     let _permit = semaphore.acquire().await;
-    if let Some(body) = build_notify_body(&job) {
-        let request_result = client.post(&config.notify_url).json(&body).send().await;
-        if let Err(e) = request_result {
-            error!("Failed to send notification: {}", e);
-            handle_error(&job).await;
-        } else if let Ok(response) = request_result {
-            handle_received_response(&job, response).await;
-        }
+    let body = build_notify_body(&job);
+    debug!("Sending notification: {:?}", body);
+    let request_result = client.post(&config.notify_url).json(&body).send().await;
+    if let Err(e) = request_result {
+        error!("Failed to send notification: {}", e);
+        handle_error(&job).await;
+    } else if let Ok(response) = request_result {
+        handle_received_response(&job, response).await;
     }
 }
 
-fn build_notify_body(job: &Job) -> Option<String> {
+fn build_notify_body(job: &Job) -> NotifyBody {
     if job.notify_contents.is_empty() {
         // 离线消息
         info!("Send offline notify....");
         let now = Local::now();
         let current_time = now.format("%Y-%m-%d %H:%M:%S").to_string();
-        let body = NotifyBody {
+        NotifyBody {
             device_number: job.device_number.clone(),
             is_online: false,
-            timestamp: current_time
-        };
-        serde_json::to_string(&body).map_err(|_| {
-            error!("Failed to serialize notify body!");
-        }).ok().map(|body| {
-            debug!("Sending notification body: {}", body);
-            body
-        })
+            timestamp: current_time,
+        }
     } else {
         // 在线消息
         notify_contents_2_payload(&job.notify_contents, &job.device_number)
     }
 }
 
-fn notify_contents_2_payload(notify_contents: &String, device_number: &str) -> Option<String> {
+fn notify_contents_2_payload(notify_contents: &String, device_number: &str) -> NotifyBody {
     let payload: Payload = serde_json::from_str(&notify_contents).map_err(|_| {
         error!("Failed to parse notify contents!");
-    }).ok()?;
+    }).ok().expect("Failed to parse notify contents!");
 
-    let body = NotifyBody::from_payload(payload, device_number.to_string());
-
-    serde_json::to_string(&body).map_err(|_| {
-        error!("Failed to serialize notify body!");
-    }).ok().map(|body| {
-        debug!("Sending notification body: {}", body);
-        body
-    })
+    NotifyBody::from_payload(payload, device_number.to_string())
 }

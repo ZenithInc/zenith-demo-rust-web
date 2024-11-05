@@ -239,45 +239,25 @@ async fn send_request(job: &Job, semaphore: &Arc<Semaphore>, client: &Client) {
     let result = std::env::var("UV_LAMP_MQTT_TASK_NOTIFY_URL");
     match result {
         Ok(url) => {
-            if let Some(body) = notify_contents_2_payload(&job.notify_contents, &job.device_number)
-            {
-                let request_result = client.post(url).json(&body).send().await;
-                match request_result {
-                    Ok(response) => handle_received_response(&job, response).await,
-                    Err(err) => {
-                        error!("Request endpoint failed: {}", err);
-                        handle_error(&job).await
-                    }
+            let body = notify_contents_2_payload(&job.notify_contents, &job.device_number);
+            debug!("Sending notification: {:?}", body);
+            let request_result = client.post(url).json(&body).send().await;
+            match request_result {
+                Ok(response) => handle_received_response(&job, response).await,
+                Err(err) => {
+                    error!("Request endpoint failed: {}", err);
+                    handle_error(&job).await
                 }
-            } else {
-                error!("Failed to notify contents");
             }
         }
         Err(_) => error!("Get notify url of task failed!"),
     }
 }
 
-// xxx: 这面这个方法写得啰嗦，可以优化，参考： mqtt_status_tasks::notify_contents_2_payload()
-fn notify_contents_2_payload(notify_contents: &String, device_number: &String) -> Option<String> {
-    let payload: Option<Payload> = match serde_json::from_str(&notify_contents) {
-        Ok(body) => Some(body),
-        Err(_) => {
-            error!("Failed to parse notify contents!");
-            return None;
-        }
-    };
-    if let Some(payload) = payload {
-        let body = NotifyBody::from_payload(payload, device_number.clone());
-        return match serde_json::to_string(&body) {
-            Ok(body) => {
-                debug!("Sending notification body: {}", body);
-                Some(body)
-            }
-            Err(_) => {
-                error!("Failed to serialize notify contents!");
-                None
-            }
-        };
-    }
-    None
+fn notify_contents_2_payload(notify_contents: &String, device_number: &String) -> NotifyBody {
+    let payload: Payload = serde_json::from_str(&notify_contents).map_err(|_| {
+        error!("Failed to parse notify contents!");
+    }).ok().expect("Failed to parse notify contents!");
+
+    NotifyBody::from_payload(payload, device_number.clone())
 }
