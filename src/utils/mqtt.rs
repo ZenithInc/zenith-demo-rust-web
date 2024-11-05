@@ -264,7 +264,7 @@ impl DeviceManager {
     pub fn find_all_offline_devices(&self) -> Vec<String> {
         let current_time = Self::get_current_time();
         self.devices.iter().filter_map(|(device_number, device_info)| {
-            if device_info.last_response_time.is_none() || current_time - device_info.last_response_time.unwrap() > 60 {
+            if device_info.last_response_time.is_none() || current_time - device_info.last_response_time.unwrap() > 180 {
                 Some(device_number.clone())
             } else {
                 None
