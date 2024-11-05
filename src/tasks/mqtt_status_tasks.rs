@@ -100,7 +100,7 @@ pub fn notify(notify: Arc<Notify>) -> BoxFuture<'static, ()> {
         loop {
             info!("MQTT device status modify notify task start running...");
             tokio::select! {
-                _ = tokio::time::sleep(Duration::from_secs(5)) => {
+                _ = tokio::time::sleep(Duration::from_secs(3)) => {
                     handle_notify().await;
                 },
                 _ = notify.notified() => {
@@ -135,6 +135,7 @@ fn handle_notify() -> BoxFuture<'static, ()> {
 
 async fn send_requests(jobs: Vec<Job>, config: &Config) {
     let result = Client::builder()
+        .pool_max_idle_per_host(100)
         .timeout(Duration::from_secs(config.timeout_seconds.into()))
         .build();
     let client = match result {
@@ -177,7 +178,7 @@ async fn send_request(job: &Job, semaphore: &Semaphore, client: &Client, config:
 fn build_notify_body(job: &Job) -> NotifyBody {
     if job.notify_contents.is_empty() {
         // 离线消息
-        info!("Send offline notify....");
+        info!("Send offline notify...");
         let now = Local::now();
         let current_time = now.format("%Y-%m-%d %H:%M:%S").to_string();
         NotifyBody {
@@ -187,6 +188,7 @@ fn build_notify_body(job: &Job) -> NotifyBody {
         }
     } else {
         // 在线消息
+        info!("Send online notify...");
         notify_contents_2_payload(&job.notify_contents, &job.device_number)
     }
 }

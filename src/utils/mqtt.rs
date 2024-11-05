@@ -152,6 +152,10 @@ impl MqttHandler {
                 return;
             }
         };
+        // 不知道为什么会收到这样的消息
+        if payload.contains("vI") {
+            return;
+        }
         info!("Received message: topic [{}], payload: {}", topic, payload);
         let device_number = match get_device_number_from_topic(topic.as_str()) {
             Some(device_number) => device_number,
