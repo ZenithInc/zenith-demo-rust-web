@@ -144,7 +144,7 @@ async fn send_requests(jobs: Vec<Job>, config: &Config) {
             return;
         }
     };
-    let concurrency_limit = 10;
+    let concurrency_limit = 20;
     let semaphore = Arc::new(Semaphore::new(concurrency_limit));
     let mut futures = FuturesUnordered::new();
 
@@ -193,7 +193,7 @@ fn build_notify_body(job: &Job) -> NotifyBody {
 
 fn notify_contents_2_payload(notify_contents: &String, device_number: &str) -> NotifyBody {
     let payload: Payload = serde_json::from_str(&notify_contents).map_err(|_| {
-        error!("Failed to parse notify contents!");
+        error!("Failed to parse notify contents: {}", notify_contents);
     }).ok().expect("Failed to parse notify contents!");
 
     NotifyBody::from_payload(payload, device_number.to_string())
