@@ -10,4 +10,7 @@ pub struct TurnParams {
     pub device_number: String,
 
     pub status: bool,
+
+    // 消毒时间: 分钟
+    pub duration: i32
 }

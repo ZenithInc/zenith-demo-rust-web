@@ -14,7 +14,7 @@ impl ControlService {
         let message = json!({
             "id": params.message_id,
             "s": if params.status { 1 } else { 0 },
-            "d": 1,
+            "d": params.duration,
         })
         .to_string();
 
